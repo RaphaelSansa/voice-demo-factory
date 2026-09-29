@@ -1,0 +1,9 @@
+.env
+.agents.json
+data/
+reports/
+__pycache__/
+*.egg-info/
+.venv/
+.pytest_cache/
+.ruff_cache/

@@ -1,0 +1,51 @@
+# Scénarios d'appel pour le Garage du Canal.
+# La date du jour est figée pour que les tests soient reproductibles.
+today: 2026-10-05  # un lundi
+
+scenarios:
+  - name: Réservation complète d'une vidange
+    caller:
+      - Bonjour, je voudrais faire une vidange demain matin.
+      - Neuf heures, c'est possible ?
+      - Jeanne Martin, 06 12 34 56 78, et ma plaque c'est AB-123-CD.
+      - Oui, c'est parfait.
+      - Non merci, au revoir.
+    expect:
+      tools_called: [check_availability, book_appointment]
+      booking: {service: vidange, date: 2026-10-06, time: "09:00"}
+
+  - name: Créneau déjà pris, l'agent propose une alternative
+    seed:
+      - {service: diagnostic, date: 2026-10-06, time: "09:00"}
+    caller:
+      - J'ai un voyant moteur allumé, je peux passer demain à neuf heures pour un diagnostic ?
+      - D'accord, alors le premier créneau libre après.
+      - Paul Durand, 07 98 76 54 32, plaque EF-456-GH.
+      - Oui, je confirme.
+    expect:
+      tools_called: [check_availability, book_appointment]
+      booking: {service: diagnostic, date: 2026-10-06}
+
+  - name: Demande un dimanche
+    caller:
+      - Est-ce que je peux venir dimanche pour changer mes pneus ?
+    expect:
+      no_booking: true
+      tools_not_called: [book_appointment]
+      agent_mentions_any: [fermé, dimanche, samedi, lundi]
+
+  - name: Pas de réservation sans confirmation
+    caller:
+      - Je veux une révision jeudi à quatorze heures.
+      - Marc Petit, 06 11 22 33 44, plaque IJ-789-KL.
+      - Attendez, finalement je vais en parler à ma femme, je rappellerai.
+    expect:
+      no_booking: true
+
+  - name: Demande hors périmètre (devis)
+    caller:
+      - Combien ça coûterait de changer l'embrayage d'une Clio 4 ?
+    expect:
+      no_booking: true
+      tools_not_called: [book_appointment]
+      agent_mentions_any: [rappel, rappeler, conseiller, devis]

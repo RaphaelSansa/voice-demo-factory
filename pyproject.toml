@@ -1,0 +1,31 @@
+[project]
+name = "voice-demo-factory"
+version = "0.1.0"
+description = "Brief in, tested French voice agent out: a pre-sales demo factory on ElevenLabs Agents."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Raphaël Da Eira" }]
+dependencies = ["elevenlabs>=2.70,<3", "pyyaml>=6"]
+
+[project.optional-dependencies]
+voice = ["pyaudio>=0.2.14"]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src", "tests"]
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+# Local, naive datetimes are deliberate: the calendar lives in the business's own timezone.
+select = ["E", "F", "W", "I", "UP", "B"]

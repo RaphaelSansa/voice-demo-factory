@@ -1,0 +1,45 @@
+# Prospect fictif : garage automobile indépendant.
+company: Garage du Canal
+sector: garage automobile
+city: Paris 10e
+agent_name: Léa
+tone: chaleureux, direct, un peu familier comme un bon garagiste de quartier
+
+services:
+  vidange:
+    label: vidange
+    duration_min: 30
+    price: "à partir de 79 €"
+    aliases: [changement d'huile, huile]
+  pneus:
+    label: changement de pneus
+    duration_min: 45
+    price: "39 € la main d'œuvre, pneus en plus"
+    aliases: [pneu, pneus]
+  diagnostic:
+    label: diagnostic
+    duration_min: 60
+    price: "59 €, déduit si on fait la réparation"
+    aliases: [diag, voyant allumé, bruit bizarre]
+  revision:
+    label: révision constructeur
+    duration_min: 90
+    price: "selon le modèle, devis au téléphone impossible"
+    aliases: [révision, entretien]
+
+opening_hours:
+  lundi: ["08:30-12:30", "14:00-18:30"]
+  mardi: ["08:30-12:30", "14:00-18:30"]
+  mercredi: ["08:30-12:30", "14:00-18:30"]
+  jeudi: ["08:30-12:30", "14:00-18:30"]
+  vendredi: ["08:30-12:30", "14:00-18:30"]
+  samedi: ["09:00-13:00"]
+
+extra_field:
+  key: plate
+  label: la plaque d'immatriculation
+
+faq:
+  adresse: 12 quai de Valmy, Paris 10e, métro Jacques Bonsergent
+  véhicule de prêt: pas de véhicule de prêt, mais une borne Vélib juste devant
+  paiement: carte, espèces, pas de chèque

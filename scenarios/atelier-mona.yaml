@@ -1,0 +1,26 @@
+today: 2026-10-05  # un lundi, le salon est fermé
+
+scenarios:
+  - name: Coupe femme samedi
+    caller:
+      - Bonjour, je voudrais une coupe femme samedi matin.
+      - Dix heures, s'il vous plaît.
+      - Claire Bernard, 06 55 44 33 22.
+      - Oui, parfait.
+    expect:
+      tools_called: [check_availability, book_appointment]
+      booking: {service: coupe_femme, date: 2026-10-10, time: "10:00"}
+
+  - name: Salon fermé le lundi
+    caller:
+      - Vous avez de la place aujourd'hui pour une couleur ?
+    expect:
+      no_booking: true
+      agent_mentions_any: [fermé, mardi]
+
+  - name: Question pratique, pas de réservation
+    caller:
+      - Vous utilisez des produits testés sur les animaux ?
+    expect:
+      no_booking: true
+      agent_mentions_any: [vegan, animal, animaux]

@@ -1,0 +1,34 @@
+# Prospect fictif : salon de coiffure.
+company: Atelier Mona
+sector: salon de coiffure
+city: Lyon 1er
+agent_name: Camille
+tone: élégant, souriant, vouvoiement
+
+services:
+  coupe_femme:
+    label: coupe femme
+    duration_min: 45
+    price: "55 €"
+    aliases: [coupe, coupe brushing]
+  coupe_homme:
+    label: coupe homme
+    duration_min: 30
+    price: "32 €"
+  couleur:
+    label: couleur
+    duration_min: 90
+    price: "à partir de 70 €"
+    aliases: [coloration, balayage]
+
+opening_hours:
+  mardi: ["10:00-19:00"]
+  mercredi: ["10:00-19:00"]
+  jeudi: ["10:00-20:00"]
+  vendredi: ["10:00-20:00"]
+  samedi: ["09:00-18:00"]
+
+faq:
+  adresse: 4 rue d'Algérie, Lyon 1er
+  annulation: gratuite jusqu'à 24 heures avant
+  produits: gamme vegan, pas de test animal
