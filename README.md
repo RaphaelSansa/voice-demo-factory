@@ -71,6 +71,7 @@ flowchart LR
 - **Test outcomes, not sentences.** An LLM never says the same thing twice, so scenarios assert on what matters: which tools were called and what ended up in the calendar. "Slot already taken", "closed on Sunday", "no booking without an explicit yes" and "out-of-scope quote request" are all covered.
 - **Written for the ear.** The prompt enforces short turns, no lists, times said out loud, phone numbers read back in pairs, and confirmation codes spelled letter by letter. Tool results are short on purpose: at most four suggested slots, never the full day, plus an exact check when the caller asks for a specific time.
 - **Deterministic tests.** Scenarios freeze "today" and seed the calendar, so a failure means the agent changed, not the date.
+- **Network drops are not agent failures.** If the websocket drops mid-call (keepalive timeout), the scenario is replayed once and the report says so. A genuine agent failure is never retried, so flakiness stays visible.
 - **Low latency defaults.** `eleven_flash_v2_5` for TTS and a fast LLM (configurable with `AGENT_LLM`).
 
 ## Quick start

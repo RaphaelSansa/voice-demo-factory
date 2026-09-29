@@ -1,9 +1,10 @@
+import logging
 from datetime import date, datetime
 
 from conftest import GARAGE, ROOT
 
 from booking_agent.calendar_store import CalendarStore
-from booking_agent.scenarios import evaluate, load_scenarios
+from booking_agent.scenarios import evaluate, load_scenarios, sdk_errors
 
 NOW = datetime(2026, 10, 5, 7, 0)
 
@@ -50,3 +51,12 @@ def test_bundled_scenario_files_are_valid():
         assert today.weekday() == 0 and scenarios
         for sc in scenarios:
             assert sc.caller and sc.expect, sc.name
+
+
+def test_sdk_errors_captures_websocket_drops_from_the_sdk_logger():
+    sdk = logging.getLogger("elevenlabs.conversational_ai.conversation")
+    with sdk_errors() as errors:
+        sdk.warning("not an error")
+        sdk.error("Error receiving message: keepalive ping timeout")
+    sdk.error("after the scenario")
+    assert errors == ["Error receiving message: keepalive ping timeout"]

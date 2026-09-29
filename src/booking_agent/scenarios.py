@@ -7,7 +7,10 @@ not the exact wording the LLM chose.
 
 from __future__ import annotations
 
+import logging
 import statistics
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from pathlib import Path
@@ -36,6 +39,8 @@ class Result:
     failures: list[str]
     transcript_lines: list[str]
     latencies_ms: list[int]
+    network_error: str | None = None  # the websocket dropped: not the agent's fault
+    retried: bool = False
 
 
 def load_scenarios(path: Path) -> tuple[date, list[Scenario]]:
@@ -81,6 +86,24 @@ def evaluate(
     return failures
 
 
+@contextmanager
+def sdk_errors(logger_name: str = "elevenlabs.conversational_ai") -> Iterator[list[str]]:
+    """Collect errors the SDK logs from its websocket thread (e.g. keepalive ping timeout)."""
+    errors: list[str] = []
+
+    class _Collect(logging.Handler):
+        def emit(self, record: logging.LogRecord) -> None:
+            errors.append(record.getMessage())
+
+    handler = _Collect(level=logging.ERROR)
+    logger = logging.getLogger(logger_name)
+    logger.addHandler(handler)
+    try:
+        yield errors
+    finally:
+        logger.removeHandler(handler)
+
+
 def run_scenario(client: ElevenLabs, agent_id: str, brief: Brief, today: date, scenario: Scenario) -> Result:
     clock = fixed_clock(today)
     store = CalendarStore(brief, today=today)
@@ -97,27 +120,32 @@ def run_scenario(client: ElevenLabs, agent_id: str, brief: Brief, today: date, s
         for s in scenario.seed
     )
     lines: list[str] = []
-    conversation, transcript = open_session(
-        client, agent_id, BookingTools(store, clock=clock), today, voice=False, on_event=lines.append
-    )
-    try:
-        if not wait_ready(transcript):
-            return Result(scenario, False, ["l'agent n'a pas répondu à l'ouverture"], lines, [])
-        for line in scenario.caller:
-            if transcript.ended.is_set():
-                lines.append("   (l'agent a raccroché)")
-                break
-            lines.append(f"🧑 {line}")
-            if say(conversation, transcript, line) is None and not transcript.ended.is_set():
-                lines.append("   (pas de réponse de l'agent)")
-    finally:
-        if not transcript.ended.is_set():
-            conversation.end_session()
-        conversation.wait_for_session_end()
+    with sdk_errors() as errors:
+        conversation, transcript = open_session(
+            client, agent_id, BookingTools(store, clock=clock), today, voice=False, on_event=lines.append
+        )
+        try:
+            if not wait_ready(transcript):
+                return Result(scenario, False, ["l'agent n'a pas répondu à l'ouverture"], lines, [], _first(errors))
+            for line in scenario.caller:
+                if transcript.ended.is_set():
+                    lines.append("   (l'agent a raccroché)" if not errors else "   (connexion perdue)")
+                    break
+                lines.append(f"🧑 {line}")
+                if say(conversation, transcript, line) is None and not transcript.ended.is_set():
+                    lines.append("   (pas de réponse de l'agent)")
+        finally:
+            if not transcript.ended.is_set():
+                conversation.end_session()
+            conversation.wait_for_session_end()
 
     agent_text = " ".join(t for who, t in transcript.turns if who == "agent")
     failures = evaluate(scenario.expect, transcript.tools_called(), store, agent_text, seeded_codes)
-    return Result(scenario, not failures, failures, lines, transcript.latencies_ms)
+    return Result(scenario, not failures, failures, lines, transcript.latencies_ms, _first(errors))
+
+
+def _first(errors: list[str]) -> str | None:
+    return errors[0] if errors else None
 
 
 def write_report(brief: Brief, results: list[Result], out_dir: Path = Path("reports")) -> Path:
@@ -134,6 +162,10 @@ def write_report(brief: Brief, results: list[Result], out_dir: Path = Path("repo
     ]
     for r in results:
         out += [f"## {'✅' if r.passed else '❌'} {r.scenario.name}", ""]
+        if r.retried:
+            out += ["- relancé une fois après une coupure réseau (pas un échec de l'agent)", ""]
+        elif r.network_error:
+            out += [f"- coupure réseau pendant l'appel : {r.network_error}", ""]
         out += [f"- {f}" for f in r.failures] + ([""] if r.failures else [])
         out += ["```", *r.transcript_lines, "```", ""]
     path.write_text("\n".join(out), encoding="utf-8")

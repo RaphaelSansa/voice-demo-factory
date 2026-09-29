@@ -97,6 +97,11 @@ def cmd_test(brief, args) -> None:
     for sc in scenarios:
         print(f"▶ {sc.name} ...", end=" ", flush=True)
         result = run_scenario(client, agent_id, brief, today, sc)
+        if not result.passed and result.network_error:
+            # A dropped websocket says nothing about the agent: replay once, and say so in the report.
+            print("coupure réseau, nouvel essai ...", end=" ", flush=True)
+            result = run_scenario(client, agent_id, brief, today, sc)
+            result.retried = True
         print("OK" if result.passed else "ÉCHEC : " + " ; ".join(result.failures))
         results.append(result)
     report = write_report(brief, results)
