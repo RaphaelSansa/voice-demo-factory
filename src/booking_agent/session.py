@@ -60,7 +60,9 @@ def open_session(
     today: date,
     voice: bool,
     on_event: Callable[[str], None] = print,
+    mic: bool = True,
 ) -> tuple[Conversation, Transcript]:
+    """voice=False is text only; voice=True plays the agent aloud, with mic=False nobody speaks back."""
     transcript = Transcript()
 
     def agent_said(text: str) -> None:
@@ -69,15 +71,15 @@ def open_session(
         transcript.agent_replied.set()
 
     def user_said(text: str) -> None:
-        if voice:  # in text mode we already know what we sent
+        if voice and mic:  # typed or scripted lines are already recorded by say()
             transcript.turns.append(("user", text))
             on_event(f"🧑 {text}")
 
     audio = None
     if voice:
-        from elevenlabs.conversational_ai.default_audio_interface import DefaultAudioInterface
+        from .audio import SoundDeviceAudio
 
-        audio = DefaultAudioInterface()
+        audio = SoundDeviceAudio(mic=mic)
 
     conversation = Conversation(
         client,

@@ -3,7 +3,7 @@
 python -m booking_agent preview briefs/garage-du-canal.yaml   # offline: show the generated prompt
 python -m booking_agent deploy  briefs/garage-du-canal.yaml   # create/update the agent
 python -m booking_agent talk    briefs/garage-du-canal.yaml   # speak to it (--text to type)
-python -m booking_agent test    briefs/garage-du-canal.yaml   # run the caller scenarios
+python -m booking_agent test    briefs/garage-du-canal.yaml   # run the caller scenarios (--listen to hear them)
 """
 
 from __future__ import annotations
@@ -95,12 +95,12 @@ def cmd_test(brief, args) -> None:
     client, agent_id = _client(), agent_id_for(brief.slug)
     results = []
     for sc in scenarios:
-        print(f"▶ {sc.name} ...", end=" ", flush=True)
-        result = run_scenario(client, agent_id, brief, today, sc)
+        print(f"▶ {sc.name} ...", end="\n" if args.listen else " ", flush=True)
+        result = run_scenario(client, agent_id, brief, today, sc, listen=args.listen)
         if not result.passed and result.network_error:
             # A dropped websocket says nothing about the agent: replay once, and say so in the report.
             print("coupure réseau, nouvel essai ...", end=" ", flush=True)
-            result = run_scenario(client, agent_id, brief, today, sc)
+            result = run_scenario(client, agent_id, brief, today, sc, listen=args.listen)
             result.retried = True
         print("OK" if result.passed else "ÉCHEC : " + " ; ".join(result.failures))
         results.append(result)
@@ -121,6 +121,7 @@ def main() -> None:
             p.add_argument("--text", action="store_true", help="écrire au lieu de parler")
         if name == "test":
             p.add_argument("--scenarios", help="fichier de scénarios (par défaut scenarios/<slug>.yaml)")
+            p.add_argument("--listen", action="store_true", help="écouter les appels à voix haute")
     args = parser.parse_args()
     brief = load_brief(args.brief)
     {"preview": cmd_preview, "deploy": cmd_deploy, "talk": cmd_talk, "test": cmd_test}[args.command](brief, args)

@@ -62,7 +62,7 @@ flowchart LR
 | `deploy.py` | Idempotent: re-running after editing a brief updates the same agent and tools instead of creating duplicates. |
 | `calendar_store.py` | The business rules, with no ElevenLabs dependency: slots that fit the service duration within opening hours, no overlaps, no past slots, booking horizon, short confirmation codes without ambiguous characters (no 0/O, 1/I). |
 | `tools.py` | Client tools the agent calls: `check_availability`, `book_appointment`, `cancel_appointment`. Business errors come back as data the agent can explain; unexpected errors never crash the live call. |
-| `session.py` | Live session by voice (microphone) or text, with date injected through dynamic variables and every tool call recorded. |
+| `session.py` | Live session by voice (microphone and speaker, `audio.py`) or text, with date injected through dynamic variables and every tool call recorded. |
 | `scenarios.py` | Plays scripted callers against the real agent in text mode and checks outcomes, not wording. |
 
 ## Design choices
@@ -78,13 +78,14 @@ flowchart LR
 
 ```bash
 python3.12 -m venv .venv && source .venv/bin/activate   # Python 3.10+
-pip install -e ".[dev]"            # add ",voice" for microphone mode (needs PortAudio: brew install portaudio)
+pip install -e ".[dev,voice]"      # voice: speaker and microphone through sounddevice, nothing else to install
 cp .env.example .env               # then paste your ElevenLabs API key
 
 python -m booking_agent preview briefs/garage-du-canal.yaml   # offline: see the generated prompt and tools
 python -m booking_agent deploy  briefs/garage-du-canal.yaml   # create the agent in your workspace
 python -m booking_agent talk    briefs/garage-du-canal.yaml   # talk to it (add --text to type)
 python -m booking_agent test    briefs/garage-du-canal.yaml   # run the caller scenarios, write reports/*.md
+python -m booking_agent test    briefs/garage-du-canal.yaml --listen   # same, played aloud (macOS)
 pytest                                                         # offline unit tests
 ```
 

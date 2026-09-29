@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 import statistics
+import subprocess
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
@@ -104,7 +105,17 @@ def sdk_errors(logger_name: str = "elevenlabs.conversational_ai") -> Iterator[li
         logger.removeHandler(handler)
 
 
-def run_scenario(client: ElevenLabs, agent_id: str, brief: Brief, today: date, scenario: Scenario) -> Result:
+CALLER_VOICE = "Eddy (French (France))"  # macOS built-in voice for the scripted caller
+
+
+def _speak(line: str) -> None:
+    subprocess.run(["say", "-v", CALLER_VOICE, line], check=False)
+
+
+def run_scenario(
+    client: ElevenLabs, agent_id: str, brief: Brief, today: date, scenario: Scenario, listen: bool = False
+) -> Result:
+    """listen=True plays the call aloud: the agent through ElevenLabs TTS, the caller through macOS `say`."""
     clock = fixed_clock(today)
     store = CalendarStore(brief, today=today)
     seeded_codes = frozenset(
@@ -120,20 +131,35 @@ def run_scenario(client: ElevenLabs, agent_id: str, brief: Brief, today: date, s
         for s in scenario.seed
     )
     lines: list[str] = []
+
+    def record(event: str) -> None:
+        lines.append(event)
+        if listen:
+            print(event, flush=True)
+
     with sdk_errors() as errors:
         conversation, transcript = open_session(
-            client, agent_id, BookingTools(store, clock=clock), today, voice=False, on_event=lines.append
+            client, agent_id, BookingTools(store, clock=clock), today, voice=listen, on_event=record, mic=False
         )
+
+        def quiet() -> None:  # let the agent finish speaking before the caller answers
+            if listen:
+                conversation.audio_interface.wait_until_quiet()
+
         try:
             if not wait_ready(transcript):
                 return Result(scenario, False, ["l'agent n'a pas répondu à l'ouverture"], lines, [], _first(errors))
             for line in scenario.caller:
+                quiet()
                 if transcript.ended.is_set():
-                    lines.append("   (l'agent a raccroché)" if not errors else "   (connexion perdue)")
+                    record("   (l'agent a raccroché)" if not errors else "   (connexion perdue)")
                     break
-                lines.append(f"🧑 {line}")
+                record(f"🧑 {line}")
+                if listen:
+                    _speak(line)
                 if say(conversation, transcript, line) is None and not transcript.ended.is_set():
-                    lines.append("   (pas de réponse de l'agent)")
+                    record("   (pas de réponse de l'agent)")
+            quiet()
         finally:
             if not transcript.ended.is_set():
                 conversation.end_session()
